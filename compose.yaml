@@ -1,11 +1,14 @@
+version: "3"
+
 services:
   backend:
     build:
       context: backend
+    volumes:
+      - ./backend:/app
+      - ${files}:/home/files
     ports:
       - 5000:5000
-    volumes:
-      - ${files}:/home/files
 
   frontend:
     volumes:
@@ -21,10 +24,6 @@ services:
       - TRUNK_SERVE_PORT=${TRUNK_SERVE_PORT:-80}
     ports:
       - "${TRUNK_SERVE_PORT:-8000}:${TRUNK_SERVE_PORT:-8000}"
-    develop:
-      watch:
-        - action: rebuild
-          path: frontend
 
 volumes:
   target-cache:

@@ -1,6 +1,8 @@
 import os
 from os import path
 
+from PIL import Image
+
 
 def get_path() -> str:
     return "/home/files"
@@ -11,4 +13,6 @@ def list_dir() -> [str]:
 
 
 def dir_first_file(dir: str) -> (str, str):
-    return path.join(get_path(), dir), dir
+    p = path.join(get_path(), dir)
+    img = Image.open(p)
+    return p, f"image/{img.format}".lower()
