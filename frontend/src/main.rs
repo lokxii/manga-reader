@@ -1,33 +1,76 @@
+use base64::{engine::general_purpose::STANDARD as b64, Engine as _};
+use gloo_net::http::{Request, Response};
+use log::info;
 use stylist::yew::styled_component;
+use web_sys::{AbortController, AbortSignal};
 use yew::prelude::*;
+use yew_router::prelude::*;
 
 static BACKEND_URL: &str = "http://192.168.195.124:5000";
+
+#[derive(Clone, Routable, PartialEq)]
+enum Route {
+    #[at("/")]
+    Home,
+    #[at("/book/:name")]
+    BookContent { name: String },
+    #[not_found]
+    #[at("/404")]
+    NotFound,
+}
 
 #[derive(Properties, PartialEq)]
 struct ImageProperties {
     url: String,
 }
 
-#[function_component]
-fn Image(props: &ImageProperties) -> Html {
-    html! {
-        <img
-            src={props.url.clone()}
-            style="height:100%;width:100%;object-fit:inherit"
-        />
+async fn fetch(url: &str, signal: Option<&AbortSignal>) -> Option<Response> {
+    loop {
+        match Request::get(url).abort_signal(signal).send().await {
+            Ok(res) => return Some(res),
+            Err(gloo_net::Error::JsError(j)) => {
+                if j.name == "AbortError" {
+                    return None;
+                }
+                continue;
+            }
+            _ => continue,
+        }
     }
 }
 
-#[derive(Properties, PartialEq)]
-struct BookCoverProperties {
-    name: String,
-}
-
 #[function_component]
-fn BookCover(props: &BookCoverProperties) -> Html {
-    let url = format!("{}/books/{}/thumbnail", BACKEND_URL, props.name);
+fn Image(props: &ImageProperties) -> Html {
+    let image = use_state(|| String::new());
+    {
+        let image = image.clone();
+        let url = props.url.clone();
+        let controller = AbortController::new().unwrap();
+        let signal = controller.signal();
+        use_effect_with((), move |_| {
+            wasm_bindgen_futures::spawn_local(async move {
+                let res = match fetch(&url, Some(&signal)).await {
+                    Some(res) => res,
+                    None => return,
+                };
+                let type_ = res.headers().get("Content-Type").unwrap();
+                let bytes = res.binary().await.unwrap();
+                let data = b64.encode(bytes);
+                image.set(format!("data:{};base64,{}", type_, data));
+            });
+
+            move || {
+                controller.abort();
+            }
+        });
+    }
+
     html! {
-        <Image url={url}/>
+        <img
+            src={(*image).clone()}
+            alt={"loading"}
+            style="height:auto;width:100%;object-fit:inherit"
+        />
     }
 }
 
@@ -37,14 +80,55 @@ struct BookProperties {
 }
 
 #[function_component]
+fn BookContent(props: &BookProperties) -> Html {
+    let pages = use_state(|| vec![]);
+    {
+        let pages = pages.clone();
+        let book = props.name.clone();
+        use_effect_with((), move |_| {
+            let pages = pages.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let url = format!("{}/books/{}/pages", BACKEND_URL, book);
+                let index: Vec<String> =
+                    fetch(&url, None).await.unwrap().json().await.unwrap();
+                pages.set(index);
+            });
+        })
+    }
+
+    let book = props.name.clone();
+    html! {
+        <>
+            {
+                for pages.iter().map(|page| html! {
+                    <div>
+                        <Image
+                            url={format!("{}/books/{}/pages/{}", BACKEND_URL, book, page)}
+                        />
+                    </div>
+                })
+            }
+        </>
+    }
+}
+
+#[function_component]
+fn BookCover(props: &BookProperties) -> Html {
+    let url = format!("{}/books/{}/thumbnail", BACKEND_URL, props.name);
+    html! {
+        <Image url={url}/>
+    }
+}
+
+#[function_component]
 fn Book(props: &BookProperties) -> Html {
     html! {
-    <>
-        <div>
-            <BookCover name={props.name.clone()} />
-        </div>
-        <div>{ format!("{}", props.name) }</div>
-    </>
+        <>
+            <Link<Route> to={Route::BookContent {name: props.name.clone()}}>
+                <BookCover name={props.name.clone()} />
+            </Link<Route>>
+            <div>{ format!("{}", props.name) }</div>
+        </>
     }
 }
 
@@ -58,7 +142,7 @@ fn BookShelf() -> Html {
             wasm_bindgen_futures::spawn_local(async move {
                 let url = format!("{}/books", BACKEND_URL);
                 let fetched_books: Vec<String> =
-                    reqwest::get(&url).await.unwrap().json().await.unwrap();
+                    fetch(&url, None).await.unwrap().json().await.unwrap();
                 books.set(fetched_books);
             });
         })
@@ -67,7 +151,7 @@ fn BookShelf() -> Html {
     html! {
         <>
             {
-                books.chunks(2).map(|books| html! {
+                for books.chunks(2).map(|books| html! {
                     <div class={css!("display:flex;")}>
                         {
                             books.iter().map(|book| html! {
@@ -77,19 +161,35 @@ fn BookShelf() -> Html {
                             }).collect::<Html>()
                         }
                     </div>
-                }).collect::<Html>()
+                })
             }
         </>
+    }
+}
+
+fn switch(routes: Route) -> Html {
+    match routes {
+        Route::Home => html! {
+            <>
+                <h1>{ "Books" }</h1>
+                <BookShelf />
+            </>
+        },
+        Route::BookContent { name } => html! {
+            <div>
+                <BookContent name={name} />
+            </div>
+        },
+        Route::NotFound => html! { <div>{ "You sure that book exist?" }</div> },
     }
 }
 
 #[function_component]
 fn App() -> Html {
     html! {
-        <>
-            <h1>{ "Books" }</h1>
-            <BookShelf />
-        </>
+        <HashRouter>
+            <Switch<Route> render={switch} />
+        </HashRouter>
     }
 }
 
