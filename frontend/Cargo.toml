@@ -20,4 +20,8 @@ yew-router = "0.18"
 opt-level = "s"
 
 [profile.release]
-opt-level = "s"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
