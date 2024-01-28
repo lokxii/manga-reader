@@ -22,6 +22,7 @@ enum Route {
 #[derive(Properties, PartialEq)]
 struct ImageProperties {
     url: String,
+    done: Option<UseStateHandle<bool>>,
 }
 
 async fn fetch(url: &str, signal: Option<&AbortSignal>) -> Option<Response> {
@@ -45,6 +46,7 @@ fn Image(props: &ImageProperties) -> Html {
     {
         let image = image.clone();
         let url = props.url.clone();
+        let done_state = props.done.clone();
         let controller = AbortController::new().unwrap();
         let signal = controller.signal();
         use_effect_with((), move |_| {
@@ -57,6 +59,10 @@ fn Image(props: &ImageProperties) -> Html {
                 let bytes = res.binary().await.unwrap();
                 let data = b64.encode(bytes);
                 image.set(format!("data:{};base64,{}", type_, data));
+
+                if let Some(done) = done_state {
+                    done.set(true)
+                }
             });
 
             move || {
@@ -71,6 +77,31 @@ fn Image(props: &ImageProperties) -> Html {
             alt={"loading"}
             style="height:auto;width:100%;object-fit:inherit"
         />
+    }
+}
+
+#[derive(Properties, PartialEq)]
+struct BookPagesProperties {
+    pages: Vec<String>,
+}
+
+#[function_component]
+fn BookPages(props: &BookPagesProperties) -> Html {
+    let pages = &props.pages;
+    if pages.len() == 0 {
+        return html! {};
+    }
+
+    let done_signal = use_state(|| false);
+    html! {
+        <>
+            <div>
+                <Image url={pages[0].clone()} done={Some(done_signal.clone())} />
+            </div>
+            if *done_signal {
+                <BookPages pages={pages[1..].to_owned()} />
+            }
+        </>
     }
 }
 
@@ -96,19 +127,13 @@ fn BookContent(props: &BookProperties) -> Html {
         })
     }
 
-    let book = props.name.clone();
+    let book = &props.name;
     html! {
-        <>
-            {
-                for pages.iter().map(|page| html! {
-                    <div>
-                        <Image
-                            url={format!("{}/books/{}/pages/{}", BACKEND_URL, book, page)}
-                        />
-                    </div>
-                })
-            }
-        </>
+        <BookPages pages={
+            pages.iter().map(|page|
+                format!("{}/books/{}/pages/{}", BACKEND_URL, book, page)
+            ).collect::<Vec<String>>()
+        }/>
     }
 }
 
@@ -116,7 +141,7 @@ fn BookContent(props: &BookProperties) -> Html {
 fn BookCover(props: &BookProperties) -> Html {
     let url = format!("{}/books/{}/thumbnail", BACKEND_URL, props.name);
     html! {
-        <Image url={url}/>
+        <Image url={url} done={None}/>
     }
 }
 
