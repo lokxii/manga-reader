@@ -13,7 +13,12 @@ CORS(app)
 
 @app.get("/books")
 def get_books():
-    return list_dir()
+    d = list_dir()
+    try:
+        d.remove(".DS_Store")
+    except ValueError:
+        pass
+    return d
 
 
 @app.get("/books/<string:name>/thumbnail")
@@ -31,6 +36,10 @@ def get_book_pages(name):
 
     dirs = list_dir(name)
     dirs.sort()
+    try:
+        dirs.remove(".DS_Store")
+    except ValueError:
+        pass
     return dirs
 
 
