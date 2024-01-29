@@ -20,7 +20,7 @@ def list_dir(p: str) -> [str]:
 def compress(file, thumbnail):
     img = Image.open(file).convert("RGB")
     img_io = BytesIO()
-    max_width = 500 if thumbnail else 900
+    max_width = 300 if thumbnail else 900
     quality = 40 if thumbnail else 50 if img.width > 900 else 75
     if img.width > max_width:
         ratio = max_width / img.width
