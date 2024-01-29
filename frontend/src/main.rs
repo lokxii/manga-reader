@@ -1,7 +1,6 @@
 use base64::{engine::general_purpose::STANDARD as b64, Engine as _};
 use gloo_net::http::{Request, Response};
-use log::info;
-use stylist::yew::styled_component;
+// use log::info;
 use web_sys::{AbortController, AbortSignal};
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -157,7 +156,7 @@ fn Book(props: &BookProperties) -> Html {
     }
 }
 
-#[styled_component]
+#[function_component]
 fn BookShelf() -> Html {
     let books = use_state(|| vec![]);
     {
@@ -177,10 +176,10 @@ fn BookShelf() -> Html {
         <>
             {
                 for books.chunks(2).map(|books| html! {
-                    <div class={css!("display:flex;")}>
+                    <div style="display:flex;">
                         {
                             books.iter().map(|book| html! {
-                                <div class={css!("flex:50%;")}>
+                                <div style="flex:50%;">
                                     <Book name={book.clone()}/>
                                 </div>
                             }).collect::<Html>()
