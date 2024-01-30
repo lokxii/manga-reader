@@ -1,6 +1,6 @@
 FROM rust:1.75-slim-bookworm
 
-RUN apt-get --yes update && apt-get --yes install curl
+RUN apt-get --yes update && apt-get --yes install curl libssl-dev pkg-config
 RUN rustup target add wasm32-unknown-unknown
 COPY install-from-binstall-release.sh .
 RUN bash install-from-binstall-release.sh

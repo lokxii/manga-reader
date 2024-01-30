@@ -1,0 +1,15 @@
+[Unit]
+Description=Manga Reader
+After=network-online.target network.target zerotier-one.service docker.service containerd.service
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=austinsiu
+WorkingDirectory=/home/austinsiu/manga-reader
+ExecStart=/home/austinsiu/manga-reader/start.sh
+Environment=""
+
+[Install]
+WantedBy=multi-user.target

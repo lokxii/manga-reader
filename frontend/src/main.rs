@@ -5,7 +5,7 @@ use web_sys::{AbortController, AbortSignal};
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-static BACKEND_URL: &str = "http://192.168.195.124:5000";
+static BACKEND_URL: &str = "http://192.168.195.95:5000";
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
