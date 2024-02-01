@@ -1,6 +1,5 @@
 use base64::{engine::general_purpose::STANDARD as b64, Engine as _};
 use gloo_net::http::{Request, Response};
-// use log::info;
 use web_sys::{AbortController, AbortSignal};
 use yew::prelude::*;
 use yew_router::prelude::*;
@@ -94,9 +93,7 @@ fn BookPages(props: &BookPagesProperties) -> Html {
     let done_signal = use_state(|| false);
     html! {
         <>
-            <div>
-                <Image url={pages[0].clone()} done={Some(done_signal.clone())} />
-            </div>
+            <Image key={pages[0].clone()} url={pages[0].clone()} done={Some(done_signal.clone())} />
             if *done_signal {
                 <BookPages pages={pages[1..].to_owned()} />
             }
