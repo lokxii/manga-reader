@@ -20,7 +20,7 @@ enum Route {
 #[derive(Properties, PartialEq)]
 struct ImageProperties {
     url: String,
-    done: Option<UseStateHandle<bool>>,
+    done: Option<UseStateHandle<usize>>,
 }
 
 async fn fetch(url: &str, signal: Option<&AbortSignal>) -> Option<Response> {
@@ -59,7 +59,7 @@ fn Image(props: &ImageProperties) -> Html {
                 image.set(format!("data:{};base64,{}", type_, data));
 
                 if let Some(done) = done_state {
-                    done.set(true)
+                    done.set(*done + 1)
                 }
             });
 
@@ -90,13 +90,14 @@ fn BookPages(props: &BookPagesProperties) -> Html {
         return html! {};
     }
 
-    let done_signal = use_state(|| false);
+    let counter = use_state(|| 1);
     html! {
         <>
-            <Image key={pages[0].clone()} url={pages[0].clone()} done={Some(done_signal.clone())} />
-            if *done_signal {
-                <BookPages pages={pages[1..].to_owned()} />
-            }
+        {
+            for pages.iter().take(*counter.clone()).map(|page| html! {
+                <Image key={page.clone()} url={page.clone()} done={Some(counter.clone())} />
+            })
+        }
         </>
     }
 }
